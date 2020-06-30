@@ -17,7 +17,7 @@
 
 void printHelp() {
   char indent[10] = "        ";
-  printf("taos shell is used to test the TAOS database\n");
+  printf("taos shell is used to test the TDEngine database\n");
 
   printf("%s%s\n", indent, "-h");
   printf("%s%s%s\n", indent, indent, "TDEngine server IP address to connect. The default host is localhost.");
@@ -201,25 +201,23 @@ void shellReadCommand(TAOS *con, char command[]) {
 void *shellLoopQuery(void *arg) {
   TAOS *con = (TAOS *)arg;
   char *command = malloc(MAX_COMMAND_SIZE);
+  if (command == NULL) return NULL;
 
   while (1) {
     memset(command, 0, MAX_COMMAND_SIZE);
     shellPrintPrompt();
 
     // Read command from shell.
-    char command[MAX_COMMAND_SIZE];
     shellReadCommand(con, command);
 
     // Run the command
-    if (command != NULL) {
-      shellRunCommand(con, command);
-    }
+    shellRunCommand(con, command);
   }
 
   return NULL;
 }
 
-void shellPrintNChar(char *str, int width) {
+void shellPrintNChar(char *str, int width, bool printMode) {
   int     col_left = width;
   wchar_t wc;
   while (col_left > 0) {
@@ -237,7 +235,12 @@ void shellPrintNChar(char *str, int width) {
     printf(" ");
     col_left--;
   }
-  printf("|");
+  
+  if (!printMode) {
+    printf("|");
+  } else {
+    printf("\n");
+  }
 }
 
 void get_history_path(char *history) { sprintf(history, "%s/%s", ".", HISTORY_FILE); }

@@ -13,13 +13,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <locale.h>
-#include <pthread.h>
-#include <signal.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "os.h"
 #include "shell.h"
 #include "tsclient.h"
@@ -31,6 +24,7 @@ int32_t   TIMESTAMP_OUTPUT_LENGTH = 22;
 
 // TODO: IMPLEMENT INTERRUPT HANDLER.
 void interruptHandler(int signum) {
+#ifdef LINUX
   TAOS_RES* res = taos_use_result(con);
   taos_stop_query(res);
   if (res != NULL) {
@@ -41,6 +35,10 @@ void interruptHandler(int signum) {
     tscQueueAsyncFreeResult(res);
   }
   result = NULL;
+#else
+  printf("\nReceive ctrl+c or other signal, quit shell.\n");
+  exit(0);
+#endif
 }
 
 int checkVersion() {
@@ -64,7 +62,19 @@ int checkVersion() {
 }
 
 // Global configurations
-struct arguments args = {NULL, NULL, NULL, NULL, NULL, false, false, "\0", NULL};
+struct arguments args = {
+  .host = NULL,
+  .password = NULL,
+  .user = NULL,
+  .database = NULL,
+  .timezone = NULL,
+  .is_raw_time = false,
+  .is_use_passwd = false,
+  .file = "\0",
+  .dir = "\0",
+  .threadNum = 5,
+  .commands = NULL
+};
 
 /*
  * Main function.
@@ -90,6 +100,9 @@ int main(int argc, char* argv[]) {
   act.sa_handler = interruptHandler;
   sigaction(SIGTERM, &act, NULL);
   sigaction(SIGINT, &act, NULL);
+
+  /* Get grant information */
+  shellGetGrantInfo(con);
 
   /* Loop to query the input. */
   while (1) {
